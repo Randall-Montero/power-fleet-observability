@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # ── Python unit tests ────────────────────────────────────────────────────────
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: exporter/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r exporter/requirements.txt pytest
+
+      - name: Run tests
+        run: pytest exporter/tests -v
+
+  # ── Prometheus rule lint ─────────────────────────────────────────────────────
+  promtool:
+    name: promtool check rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same image/version that the cluster runs, so CI and Minikube agree.
+      - name: Check alert rules
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/monitoring/rules:/rules:ro" \
+            prom/prometheus:v2.51.2 \
+            check rules /rules/power-fleet-alerts.yml
+
+  # ── Helm chart lint ──────────────────────────────────────────────────────────
+  helm:
+    name: helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint and render chart
+        run: |
+          helm lint helm/power-fleet-observability
+          helm template pf helm/power-fleet-observability > /dev/null
+
+  # ── Docker image build ───────────────────────────────────────────────────────
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    needs: [test, promtool, helm]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: power-fleet-observability:${{ github.sha }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max

@@ -1,0 +1,21 @@
+# Values for the exporter-only chart. Prometheus, Grafana, Alertmanager and the
+# webhook sink are deployed with the plain manifests in k8s/ (see scripts/demo.sh).
+namespace: power-fleet
+
+exporter:
+  image:
+    repository: power-fleet-observability
+    tag: latest
+    pullPolicy: Never          # use the image loaded into Minikube
+  replicaCount: 1
+  port: 8000
+  scrapeInterval: "15"
+  powerSource: simulated       # simulated | hmc
+  scenario: ""                 # cpu_saturation, memory_leak, lpar_down, ...
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"

@@ -1,0 +1,11 @@
+# Keep line endings stable across Windows/Linux so shell scripts and YAML work in
+# Minikube, Docker and GitHub Actions.
+* text=auto
+*.sh   text eol=lf
+*.py   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+Dockerfile text eol=lf
+*.png  binary

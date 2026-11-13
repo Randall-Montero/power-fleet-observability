@@ -1,0 +1,15 @@
+apiVersion: v2
+name: power-fleet-observability
+description: Helm chart for the IBM Power fleet Prometheus exporter (exporter only; the rest of the stack lives in k8s/)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - ibm-power
+  - prometheus
+  - grafana
+  - observability
+  - lpar
+  - vios
+maintainers:
+  - name: SRE Academy

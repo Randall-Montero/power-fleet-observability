@@ -1,0 +1,146 @@
+groups:
+  - name: power_fleet_lpar
+    interval: 30s
+    rules:
+
+      # ── CPU ──────────────────────────────────────────────────────────────
+      - alert: LparHighCpu
+        expr: power_lpar_cpu_utilisation > 0.85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU on LPAR {{ $labels.lpar }}"
+          description: >
+            LPAR {{ $labels.lpar }} on frame {{ $labels.frame }}
+            has CPU utilisation {{ $value | humanizePercentage }}
+            (threshold 85 %) for more than 2 minutes.
+
+      - alert: LparCriticalCpu
+        expr: power_lpar_cpu_utilisation > 0.95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU saturation on LPAR {{ $labels.lpar }}"
+          description: >
+            LPAR {{ $labels.lpar }} (frame {{ $labels.frame }}) CPU
+            utilisation is {{ $value | humanizePercentage }}.
+            Immediate attention required.
+
+      # ── Memory ───────────────────────────────────────────────────────────
+      - alert: LparHighMemory
+        expr: >
+          power_lpar_memory_used_gb / power_lpar_memory_total_gb > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on LPAR {{ $labels.lpar }}"
+          description: >
+            LPAR {{ $labels.lpar }} memory usage is
+            {{ $value | humanizePercentage }} (threshold 90 %).
+
+      # ── State ─────────────────────────────────────────────────────────────
+      - alert: LparDown
+        expr: power_lpar_state == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LPAR {{ $labels.lpar }} is not running"
+          description: >
+            LPAR {{ $labels.lpar }} on frame {{ $labels.frame }}
+            is not in Running state.
+
+  - name: power_fleet_frame
+    interval: 30s
+    rules:
+
+      # ── Overcommit ────────────────────────────────────────────────────────
+      - alert: FrameOvercommit
+        expr: >
+          power_frame_allocated_cores / power_frame_total_cores > 1.0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Core overcommit on frame {{ $labels.frame }}"
+          description: >
+            Frame {{ $labels.frame }} has {{ $value | humanizePercentage }}
+            cores allocated relative to physical capacity.
+
+      - alert: FrameHighOvercommit
+        expr: >
+          power_frame_allocated_cores / power_frame_total_cores > 1.10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Severe overcommit on frame {{ $labels.frame }}"
+          description: >
+            Frame {{ $labels.frame }} committed cores exceed physical capacity
+            by more than 10 %.
+
+  - name: power_fleet_vios
+    interval: 30s
+    rules:
+
+      # ── Disk latency ──────────────────────────────────────────────────────
+      - alert: ViosHighDiskLatency
+        expr: power_vios_disk_latency_ms > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk latency on VIOS {{ $labels.vios }}"
+          description: >
+            VIOS {{ $labels.vios }} on frame {{ $labels.frame }}
+            reports {{ $value }} ms disk latency (threshold 50 ms).
+
+      - alert: ViosCriticalDiskLatency
+        expr: power_vios_disk_latency_ms > 150
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk latency on VIOS {{ $labels.vios }}"
+          description: >
+            VIOS {{ $labels.vios }} disk latency is {{ $value }} ms.
+
+      # ── VIOS state ────────────────────────────────────────────────────────
+      - alert: ViosDown
+        expr: power_vios_state == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VIOS {{ $labels.vios }} is not running"
+          description: >
+            VIOS {{ $labels.vios }} on frame {{ $labels.frame }}
+            is not in Running state.
+
+  - name: power_fleet_source
+    interval: 30s
+    rules:
+
+      - alert: PowerSourceUnhealthy
+        expr: power_source_healthy == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Power Fleet data source is unreachable"
+          description: >
+            The exporter cannot reach the data source
+            (HMC or simulated backend). All metrics may be stale.
+
+      - alert: ExporterDown
+        expr: up{job="power_fleet_exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Power Fleet exporter is down"
+          description: >
+            Prometheus cannot scrape the power-fleet exporter.
